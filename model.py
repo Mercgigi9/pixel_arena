@@ -13,6 +13,8 @@ class Player(Base):
 
     game= relationship("Game", back_populates="players")
 
+    player_games = relationship("PlayerGame", back_populates="player")
+
 
 class Game(Base):
     __tablename__ = 'games'
@@ -26,6 +28,8 @@ class Game(Base):
 
     genres= relationship("Genre", back_populates="games")
 
+    player_games = relationship("PlayerGame", back_populates="game")
+
 
 class Genre(Base):
     __tablename__ = 'genres'
@@ -35,3 +39,16 @@ class Genre(Base):
     games_id = Column(Integer, ForeignKey('games.id'), nullable=False)
 
     game = relationship("Game", back_populates="genres")
+
+
+class PlayerGame(Base):
+    __tablename__ = 'player_games'
+    
+    id = Column(Integer, primary_key=True)
+    player_id = Column(Integer, ForeignKey('players.id'), nullable=False)
+    game_id = Column(Integer, ForeignKey('games.id'), nullable=False)
+    datetime = Column(DateTime, default=datetime.utcnow)
+    review = Column(String)
+
+    player = relationship("Player" , back_populates="player_games")
+    game = relationship("Game", back_populates="player_games")

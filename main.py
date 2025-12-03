@@ -1,3 +1,4 @@
+import fire
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from model import Base, Game, Genre
@@ -41,7 +42,14 @@ def save_to_database(data):
     print("Games added from API.")
 
 if __name__ == "__main__":
-    session = init_db()
-    fetch_and_store_games(session)
-    print("Database Initialized.")
+    fire.Fire({
+        "init_db": init_db,
+        "fetch_and_store_games": fetch_and_store_games,
+        "save_to_database": save_to_database
+    })
 
+    # session = init_db()
+    # fetch_and_store_games(session)
+    # print("Database Initialized.")
+
+    
