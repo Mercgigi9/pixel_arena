@@ -1,15 +1,26 @@
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from model import Base, Game, Genre
 import requests
-from model import SessionLocal, Game, Genre
 
-def fetch_games_from_api():
-    url = "https://www.freetogame.com/api/games?platform=pc"
+DATABASE_URL = "sqlite:///games.db"   
+
+def init_db():
+    engine = create_engine(DATABASE_URL, echo=True)
+    Base.metadata.create_all(engine)
+    SessionLocal = sessionmaker(bind=engine)
+    Session = SessionLocal()
+    return Session
+
+def fetch_and_store_games(session):
+    url = "https://www.freetogame.com/api/games?platform=pc"   
     response = requests.get(url)
     response.raise_for_status()
     data = response.json()
     return data
 
 def save_to_database(data):
-    session = SessionLocal()
+    session = requests.Session()
 
     for item in data:
         genre_name = item.get("genre", "Unknown")
@@ -21,17 +32,16 @@ def save_to_database(data):
 
         
         game = Game(
-            title=item["title"],
-            rating=item["rating"],
-            genre_id=genre.id,
+            title=item.get("title"),
+            rating=item.get("rating")
         )
         session.add(game)
 
     session.commit()
-    session.close()
+    print("Games added from API.")
 
-def main():
-    data = fetch_games_from_api()
-    save_to_database(data)
-    print("Data saved successfully!")
+if __name__ == "__main__":
+    session = init_db()
+    fetch_and_store_games(session)
+    print("Database Initialized.")
 
