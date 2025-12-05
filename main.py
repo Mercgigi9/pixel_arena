@@ -8,7 +8,6 @@ from sqlalchemy.orm import sessionmaker
 from model import Base, Game, Genre, Player, PlayerGame
 
 
-
 console = Console()
 DATABASE_URL = "sqlite:///games.db"
 
@@ -119,7 +118,6 @@ def leave_review(session, player, game):
     session.commit()
     console.print("[green]Review submitted![/green]")
 
-# ------------------------ Main Interactive Loop ------------------------
 
 def main():
     session = get_session()
