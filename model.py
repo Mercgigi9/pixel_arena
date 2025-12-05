@@ -21,8 +21,7 @@ class Game(Base):
     
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    players_id = Column(Integer, ForeignKey('players.id'), nullable=False)
-    created_at = Column(DateTime, default=datetime)
+    genre_id = Column(Integer, ForeignKey('genres.id'), nullable=False)
     
     players = relationship("Player", back_populates="game")
 
@@ -36,9 +35,8 @@ class Genre(Base):
     
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    games_id = Column(Integer, ForeignKey('games.id'), nullable=False)
 
-    game = relationship("Game", back_populates="genres")
+    games = relationship("Game", back_populates="genres")
 
 
 class PlayerGame(Base):
