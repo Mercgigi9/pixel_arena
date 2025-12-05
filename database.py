@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from model import Base
 
 DATABASE_URL = "sqlite:///./pixel_arena.db"   
 
