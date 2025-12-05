@@ -1,9 +1,15 @@
-import fire
+import requests
+from rich.console import Console
+from rich.table import Table
+from rich.prompt import Prompt
+from rich.prompt import IntPrompt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from model import Base, Game, Genre
-import requests
+from model import Base, Game, Genre, Player, PlayerGame
 
+
+
+console = Console()
 DATABASE_URL = "sqlite:///games.db"
 
 def get_session():
@@ -32,94 +38,142 @@ def fetch_and_store_games():
             description=item.get("short_description"),
             genre_id=genre.id
         )
-
         session.add(game)
 
     session.commit()
-    return "Games imported from API."
+    console.print("[green]Games imported successfully![/green]")
 
 
-def create_game(title: str, description: str, genre_name: str):
-    session = get_session()
+def create_account(session):
+    name = Prompt.ask("Enter a username")
+    existing = session.query(Player).filter_by(name=name).first()
+    if existing:
+        console.print("[red]Username already exists.[/red]")
+        return None
 
-    genre = session.query(Genre).filter_by(name=genre_name).first()
-    if not genre:
-        genre = Genre(name=genre_name)
-        session.add(genre)
-        session.commit()
-
-    game = Game(title=title, description=description, genre_id=genre.id)
-    session.add(game)
+    player = Player(name=name)
+    session.add(player)
     session.commit()
 
-    return f"Game '{title}' created with ID {game.id}"
+    console.print(f"[green]Account created! Your ID: {player.id}[/green]")
+    return player
 
-def list_games():
-    session = get_session()
+
+def login(session):
+    name = Prompt.ask("Enter username")
+    player = session.query(Player).filter_by(name=name).first()
+    if not player:
+        console.print("[red]No such user. Create an account first.[/red]")
+        return None
+    console.print(f"[green]Logged in as {player.name}![/green]")
+    return player
+
+def list_games(session):
     games = session.query(Game).all()
 
-    return [
-        {"id": g.id, "title": g.title, "description": g.description, "genre": g.genre.name}
-        for g in games
-    ]
+    table = Table(title="Games List")
+    table.add_column("ID", justify="right")
+    table.add_column("Title")
+
+    for g in games:
+        table.add_row(str(g.id), g.title)
+
+    console.print(table)
 
 
-def get_game(game_id: int):
-    session = get_session()
+def view_game_details(session, game_id):
     game = session.query(Game).get(game_id)
     if not game:
-        return f"No game found with ID {game_id}"
+        console.print("[red]Game not found.[/red]")
+        return None
 
-    return {
-        "id": game.id,
-        "title": game.title,
-        "description": game.description,
-        "genre": game.genre.name,
-    }
+    console.print(f"[bold]{game.title}[/bold]")
+    console.print(f"Genre: [cyan]{game.genre.name}[/cyan]")
+    console.print(f"Description: {game.description}")
 
-def update_game(game_id: int, title=None, description=None, genre_name=None):
-    session = get_session()
-    game = session.query(Game).get(game_id)
-    if not game:
-        return f"No game found with ID {game_id}"
+    reviews = session.query(PlayerGame).filter_by(game_id=game_id).all()
+    if reviews:
+        table = Table(title="Reviews")
+        table.add_column("Player")
+        table.add_column("Review")
+        table.add_column("Date")
 
-    if title:
-        game.title = title
+        for r in reviews:
+            table.add_row(r.player.name, r.review or "", str(r.datetime))
 
-    if description:
-        game.description = description
+        console.print(table)
+    else:
+        console.print("[yellow]No reviews yet.[/yellow]")
 
-    if genre_name:
-        genre = session.query(Genre).filter_by(name=genre_name).first()
-        if not genre:
-            genre = Genre(name=genre_name)
-            session.add(genre)
-            session.commit()
-        game.genre_id = genre.id
+    return game
 
+def leave_review(session, player, game):
+    console.print("Write your review (leave blank to cancel):")
+    review = Prompt.ask("Review")
+    if not review.strip():
+        console.print("[yellow]Review cancelled.[/yellow]")
+        return
+
+    entry = PlayerGame(player_id=player.id, game_id=game.id, review=review)
+    session.add(entry)
     session.commit()
-    return f"Game {game_id} updated."
+    console.print("[green]Review submitted![/green]")
 
+# ------------------------ Main Interactive Loop ------------------------
 
-def delete_game(game_id: int):
+def main():
     session = get_session()
-    game = session.query(Game).get(game_id)
-    if not game:
-        return f"No game found with ID {game_id}"
 
-    session.delete(game)
-    session.commit()
+    console.print("[bold cyan]Welcome to the Game CLI![/bold cyan]")
 
-    return f"Game {game_id} deleted."
+    while True:
+        choice = Prompt.ask(
+            "Choose an option",
+            choices=["login", "create", "import", "exit"],
+            default="login"
+        )
 
+        if choice == "create":
+            user = create_account(session)
+        elif choice == "login":
+            user = login(session)
+        elif choice == "import":
+            fetch_and_store_games()
+            continue
+        elif choice == "exit":
+            console.print("Goodbye!")
+            return
+
+        if not user:
+            continue
+
+        while True:
+            console.print("\n[bold]User Menu[/bold]")
+            action = Prompt.ask(
+                "Choose",
+                choices=["games", "logout", "exit"],
+                default="games"
+            )
+
+            if action == "games":
+                list_games(session)
+                game_id = IntPrompt.ask("Enter game ID to view or 0 to cancel", default=0)
+                if game_id == 0:
+                    continue
+                game = view_game_details(session, game_id)
+                if game:
+                    sub = Prompt.ask(
+                        "Leave a review?", choices=["yes", "no"], default="no"
+                    )
+                    if sub == "yes":
+                        leave_review(session, user, game)
+
+            elif action == "logout":
+                break
+
+            elif action == "exit":
+                console.print("Goodbye!")
+                return
 
 if __name__ == "__main__":
-    fire.Fire({
-        "fetch_and_store_games": fetch_and_store_games,
-        "create": create_game,
-        "list": list_games,
-        "get": get_game,
-        "update": update_game,
-        "delete": delete_game
-    })
-    
+    main()
