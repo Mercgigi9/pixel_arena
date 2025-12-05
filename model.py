@@ -28,6 +28,7 @@ class Player(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), unique=True, nullable=False)
+    email = Column(String(150), unique=True, nullable=True)
 
     reviews = relationship("PlayerGame", back_populates="player")
 

@@ -7,9 +7,11 @@ name = "pypi"
 importlib-metadata = "*"
 importlib-resources = "*"
 ipdb = "*"
-SQLAlchemy = "*"
 alembic = "*"
 pytest = "*"
+requests = "*"
+sqlalchemy = "*"
+rich = "*"
 
 [dev-packages]
 
