@@ -47,7 +47,7 @@ class PlayerGame(Base):
     id = Column(Integer, primary_key=True)
     player_id = Column(Integer, ForeignKey('players.id'), nullable=False)
     game_id = Column(Integer, ForeignKey('games.id'), nullable=False)
-    datetime = Column(DateTime, default=datetime.utcnow)
+    datetime = Column(DateTime, default=datetime)
     review = Column(String)
 
     player = relationship("Player" , back_populates="player_games")
